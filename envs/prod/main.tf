@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "5.0"
     }
   }
 }
@@ -100,9 +100,9 @@ module "alb" {
 
   env               = var.env
   vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.subnets.public_subnets
+  public_subnet_ids = module.vpc.public_subnets_ids
   security_groups   = [aws_security_group.alb_sg.id]
-  certificate_arn   = var.certificate_arn
+  certificate_arn   = var.backend_certificate_arn
 }
 
 /*
@@ -126,7 +126,7 @@ resource "aws_security_group" "ec2_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["46.96.14.207"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -159,23 +159,61 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# module "ec2" {
-#   source = "../../modules/ec2"
+module "asg" {
+  source = "../../modules/asg"
 
-#   instance_count       = 2
-#   ami_id               = data.aws_ami.amazon_linux.id
-#   instance_type        = "t3.micro"
-#   private_subnet_ids   = module.subnets.private_subnets
-#   security_group_ids   = [aws_security_group.ec2_sg.id]
-#   key_name             = "${var.env}-access-key"
-#   target_group_arn     = module.alb.target_group_arn
-#   target_instance_port = 8080
-#   env                  = var.env
+  ami_id         = data.aws_ami.amazon_linux.id
+  instance_type  = "t3.micro"
+  security_group = aws_security_group.ec2_sg.id
+  subnet_ids     = module.vpc.public_subnets_ids
+  lb_arn         = module.alb.lb_arn
+  env            = var.env
+}
 
-#   user_data = templatefile("${path.module}/user_data.sh", {
-#     access_key = var.ecr_admin_aws_access_key_id
-#     secret_key = var.ecr_admin_aws_secret_access_key
-#     region     = var.aws_region
-#     account_id = var.account_id
-#   })
-# }
+/*
+ * @dev     Create security group for RDS PostgreSQL to allow connections from EC2 instances
+ * @param   Allows ingress TCP traffic on port 5432 from EC2 security group
+ * @param   Allows egress all traffic on all ports range
+ */
+resource "aws_security_group" "rds_sg" {
+  name   = "${var.env}-rds-sg"
+  vpc_id = module.vpc.vpc_id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2_sg.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${var.env}-rds-sg"
+  }
+}
+
+/*
+ * @dev     Create RDS PostgreSQL instance module
+ * @param   Defines PostgreSQL specific parameters and network settings
+ */
+module "rds" {
+  source             = "../../modules/rds"
+  env                = var.env
+  vpc_id             = module.vpc.vpc_id
+  db_subnet_ids      = module.vpc.public_subnets_ids
+  security_group_ids = [aws_security_group.rds_sg.id]
+
+  engine            = "postgres"
+  engine_version    = "13.3"
+  instance_class    = "db.t3.micro"
+  allocated_storage = 20
+  username          = var.db_username
+  password          = var.db_password
+  db_name           = "core"
+}

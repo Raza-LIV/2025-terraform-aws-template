@@ -1,7 +1,6 @@
 variable "env" {
   description = "The deployment environment"
   type        = string
-  default     = "production"
 }
 
 variable "cidr_block" {
