@@ -118,13 +118,6 @@ module "alb" {
   certificate_arn   = var.backend_certificate_arn
 }
 
-module "route53_backend" {
-  source            = "../../modules/route53"
-  domain_name       = var.backend_domain
-  cf_domain_name    = module.alb.lb_dns_name
-  cf_hosted_zone_id = module.alb.lb_hosted_zone_id
-}
-
 /*
  * @dev     Create security group that is going to be applied to all EC2 instances
  * @param   Allows ingress TCP traffic on port 8080
@@ -188,6 +181,14 @@ module "asg" {
   subnet_ids     = module.vpc.public_subnets_ids
   lb_arn         = module.alb.lb_arn
   env            = var.env
+  target_group_arn = module.alb.target_group_arn
+}
+
+module "s3_document_bucket" {
+  source      = "../../modules/s3-bucket"
+  bucket_name = "migdal-document-bucket"
+
+  env = var.env
 }
 
 /*
@@ -204,6 +205,13 @@ resource "aws_security_group" "rds_sg" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.ec2_sg.id]
+  }
+
+  ingress {
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -230,7 +238,7 @@ module "rds" {
   security_group_ids = [aws_security_group.rds_sg.id]
 
   engine            = "postgres"
-  engine_version    = "13.3"
+  engine_version    = "16.3"
   instance_class    = "db.t3.micro"
   allocated_storage = 20
   username          = var.db_username
@@ -260,13 +268,6 @@ module "gateway_admin" {
   stage_name = var.env
 }
 
-module "route53_admin" {
-  source            = "../../modules/route53"
-  domain_name       = var.admin_domain
-  cf_domain_name    = module.cloudfront_admin.cf_domain_name
-  cf_hosted_zone_id = "Z2FDTNDATAQYW2"
-}
-
 module "s3_client" {
   source      = "../../modules/s3-website"
   env         = var.env
@@ -287,11 +288,4 @@ module "gateway_client" {
   source     = "../../modules/gateway"
   env        = var.env
   stage_name = var.env
-}
-
-module "route53_client" {
-  source            = "../../modules/route53"
-  domain_name       = var.client_domain
-  cf_domain_name    = module.cloudfront_client.cf_domain_name
-  cf_hosted_zone_id = "Z2FDTNDATAQYW2"
 }

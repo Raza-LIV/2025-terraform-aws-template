@@ -16,11 +16,28 @@ resource "aws_s3_bucket_website_configuration" "website_config" {
   error_document {
     key = var.error_document
   }
+
+  routing_rules = <<EOF
+[
+  {
+    "Condition": {
+      "HttpErrorCodeReturnedEquals": "404"
+    },
+    "Redirect": {
+      "ReplaceKeyWith": "${var.index_document}"
+    }
+  }
+]
+EOF
 }
 
-resource "aws_s3_bucket_acl" "website_acl" {
+resource "aws_s3_bucket_public_access_block" "website_block" {
   bucket = aws_s3_bucket.website.id
-  acl    = "public-read"
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
 }
 
 resource "aws_s3_bucket_policy" "website_policy" {

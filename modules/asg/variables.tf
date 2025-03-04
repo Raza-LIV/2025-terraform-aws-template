@@ -22,3 +22,7 @@ variable "subnet_ids" {
 variable lb_arn {
   type        = string
 }
+
+variable target_group_arn {
+  type = any
+}

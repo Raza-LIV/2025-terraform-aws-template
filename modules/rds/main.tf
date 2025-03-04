@@ -8,6 +8,7 @@ resource "aws_db_subnet_group" "rds" {
 }
 
 resource "aws_db_instance" "postgres" {
+  identifier              = "${var.env}-${var.db_name}-rds"
   allocated_storage      = var.allocated_storage
   engine                 = var.engine
   engine_version         = var.engine_version
