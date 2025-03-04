@@ -21,7 +21,39 @@ variable "secret_key" {
   sensitive   = true
 }
 
-variable "certificate_arn" {
-  description = "AWS ACM domain ARN"
+variable "backend_certificate_arn" {
+  description = "AWS ACM backend domain ARN"
   type        = string
+}
+
+variable "admin_certificate_arn" {
+  description = "AWS ACM backend domain ARN"
+  type        = string
+}
+
+variable "client_certificate_arn" {
+  description = "AWS ACM backend domain ARN"
+  type        = string
+}
+
+variable "db_username" {
+  description = "DB username"
+  type        = string
+}
+
+variable "db_password" {
+  description = "DB password"
+  type        = string
+}
+
+variable "admin_domain" {
+  type = string
+}
+
+variable "client_domain" {
+  type = string
+}
+
+variable "backend_domain" {
+  type = string
 }

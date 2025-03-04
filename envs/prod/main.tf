@@ -92,6 +92,19 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
+resource "aws_ecr_repository" "backend" {
+  name                 = "${var.env}-backend"
+  image_tag_mutability = "MUTABLE"
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = {
+    Environment = var.env
+  }
+}
+
+
 /*
  * @dev     Attach ALB public subnets inside VPC
  */
@@ -103,6 +116,13 @@ module "alb" {
   public_subnet_ids = module.vpc.public_subnets_ids
   security_groups   = [aws_security_group.alb_sg.id]
   certificate_arn   = var.backend_certificate_arn
+}
+
+module "route53_backend" {
+  source            = "../../modules/route53"
+  domain_name       = var.backend_domain
+  cf_domain_name    = module.alb.lb_dns_name
+  cf_hosted_zone_id = module.alb.lb_hosted_zone_id
 }
 
 /*
@@ -216,4 +236,62 @@ module "rds" {
   username          = var.db_username
   password          = var.db_password
   db_name           = "core"
+}
+
+module "s3_admin" {
+  source      = "../../modules/s3-website"
+  env         = var.env
+  bucket_name = "${var.env}-migdal-admin-website"
+  aws_region  = var.aws_region
+}
+
+module "cloudfront_admin" {
+  source                         = "../../modules/cloudfront"
+  env                            = var.env
+  acm_certificate_arn            = var.admin_certificate_arn
+  aliases                        = [var.admin_domain]
+  index_document                 = "index.html"
+  s3_bucket_regional_domain_name = module.s3_admin.bucket_regional_domain_name
+}
+
+module "gateway_admin" {
+  source     = "../../modules/gateway"
+  env        = var.env
+  stage_name = var.env
+}
+
+module "route53_admin" {
+  source            = "../../modules/route53"
+  domain_name       = var.admin_domain
+  cf_domain_name    = module.cloudfront_admin.cf_domain_name
+  cf_hosted_zone_id = "Z2FDTNDATAQYW2"
+}
+
+module "s3_client" {
+  source      = "../../modules/s3-website"
+  env         = var.env
+  bucket_name = "${var.env}-migdal-client-website"
+  aws_region  = var.aws_region
+}
+
+module "cloudfront_client" {
+  source                         = "../../modules/cloudfront"
+  env                            = var.env
+  acm_certificate_arn            = var.client_certificate_arn
+  aliases                        = [var.client_domain]
+  index_document                 = "index.html"
+  s3_bucket_regional_domain_name = module.s3_client.bucket_regional_domain_name
+}
+
+module "gateway_client" {
+  source     = "../../modules/gateway"
+  env        = var.env
+  stage_name = var.env
+}
+
+module "route53_client" {
+  source            = "../../modules/route53"
+  domain_name       = var.client_domain
+  cf_domain_name    = module.cloudfront_client.cf_domain_name
+  cf_hosted_zone_id = "Z2FDTNDATAQYW2"
 }
