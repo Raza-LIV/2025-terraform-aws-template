@@ -18,17 +18,17 @@ resource "aws_s3_bucket_website_configuration" "website_config" {
   }
 
   routing_rules = <<EOF
-[
-  {
-    "Condition": {
-      "HttpErrorCodeReturnedEquals": "404"
-    },
-    "Redirect": {
-      "ReplaceKeyWith": "${var.index_document}"
-    }
-  }
-]
-EOF
+    [
+      {
+        "Condition": {
+          "HttpErrorCodeReturnedEquals": "404"
+        },
+        "Redirect": {
+          "ReplaceKeyWith": "${var.index_document}"
+        }
+      }
+    ]
+  EOF
 }
 
 resource "aws_s3_bucket_public_access_block" "website_block" {
