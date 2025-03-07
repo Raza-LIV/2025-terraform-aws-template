@@ -26,3 +26,19 @@ variable lb_arn {
 variable target_group_arn {
   type = any
 }
+
+variable access_key {
+  type = string
+}
+
+variable secret_key {
+  type = string
+}
+
+variable region {
+  type = string
+}
+
+variable account_id {
+  type = string
+}

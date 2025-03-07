@@ -4,6 +4,14 @@ resource "aws_launch_template" "backend_lt" {
   instance_type = var.instance_type
   key_name = "${var.env}-key-pair"
 
+  user_data = base64encode(templatefile("${path.module}/user_data.sh.tpl", {
+    access_key = var.access_key
+    secret_key = var.secret_key
+    region     = var.region
+    account_id = var.account_id
+  }))
+
+
   network_interfaces {
     associate_public_ip_address = true
     security_groups = [var.security_group]

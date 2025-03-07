@@ -176,12 +176,16 @@ module "asg" {
   source = "../../modules/asg"
 
   ami_id           = data.aws_ami.amazon_linux.id
-  instance_type    = "t3.micro"
+  instance_type    = "t3.small"
   security_group   = aws_security_group.ec2_sg.id
   subnet_ids       = module.vpc.public_subnets_ids
   lb_arn           = module.alb.lb_arn
   env              = var.env
   target_group_arn = module.alb.target_group_arn
+  access_key       = var.access_key
+  secret_key       = var.secret_key
+  region           = var.aws_region
+  account_id       = var.account_id
 }
 
 module "s3_document_bucket" {
