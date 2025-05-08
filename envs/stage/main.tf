@@ -230,11 +230,23 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
-/*
- * @dev     Create RDS PostgreSQL instance module
- * @param   Defines PostgreSQL specific parameters and network settings
- */
-module "rds" {
+module "rds-core" {
+  source             = "../../modules/rds"
+  env                = var.env
+  vpc_id             = module.vpc.vpc_id
+  db_subnet_ids      = module.vpc.public_subnets_ids
+  security_group_ids = [aws_security_group.rds_sg.id]
+
+  engine            = "postgres"
+  engine_version    = "16.3"
+  instance_class    = "db.t3.micro"
+  allocated_storage = 20
+  username          = var.db_username
+  password          = var.db_password
+  db_name           = "core"
+}
+
+module "rds-third-party" {
   source             = "../../modules/rds"
   env                = var.env
   vpc_id             = module.vpc.vpc_id
